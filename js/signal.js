@@ -407,7 +407,7 @@
       d += ` L${f1(edge)},${f1(levelY(k))}`;
       if (k < cohorts - 1) d += ` L${f1(edge)},${f1(levelY(k + 1))}`;
     }
-    return { label: "SAD: dose escalation by cohort", points, paths: [{ d }] };
+    return { label: "Single Ascending Dose: dose escalation by cohort", points, paths: [{ d }] };
   }
 
   // 15. MAD — multiple ascending dose. With a dose every day, drug builds
@@ -434,7 +434,7 @@
       for (let k = 0; k < 3; k++) points.push({ x: xOf(n + tPeak) + random(-3, 3), y: clamp(yOf(conc(n + tPeak) * Math.exp(bellCurve() * 0.1)), TOP, BOTTOM) });
       if (n > 0) for (let k = 0; k < 2; k++) points.push({ x: xOf(n - 0.01) + random(-3, 3), y: clamp(yOf(conc(n - 0.01) * Math.exp(bellCurve() * 0.12)), TOP, BOTTOM), arm: "b" });
     }
-    return { label: "MAD: accumulation to steady state", points, paths: [{ d }] };
+    return { label: "Multiple Ascending Dose: accumulation to steady state", points, paths: [{ d }] };
   }
 
   // 16. DOSE PROPORTIONALITY — on log scales, if exposure (Cmax) rises
