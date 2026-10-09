@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+  index.html: the content of the page.
+  - Styling (colours, layout, the beam) lives in  css/style.css
+  - The chart animation lives in                  js/signal.js (timing in js/beam-sync.js)
+  - The slide-up Projects panel lives in          js/panels.js
+  The "class" names below (like class="card") are how the CSS finds
+  each element to style it.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- Makes the page fit phone screens instead of showing a zoomed-out desktop view -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Text shown on the browser tab -->
+  <title>Sanchit · Clinical Data Scientist</title>
+
+  <!-- Fonts from Google Fonts: Inter (body text), JetBrains Mono (small caps labels), Source Serif 4 (headings) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600&display=swap" rel="stylesheet" />
+
+  <!-- Our own styles -->
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- Top bar. Clicking your name ("#") also closes the Projects panel. -->
+  <header class="site-header">
+    <a class="brand" href="#">Sanchit Thakrar</a>
+  </header>
+
+  <!-- ===== Home screen: card on the left, "noise → signal" chart on the right ===== -->
+  <main class="hero">
+
+    <!-- The card. Its travelling blue edge is pure CSS (style.css, section 5). -->
+    <div class="card">
+      <div class="card-inner">
+        <h1>Sanchit Thakrar</h1>
+        <p class="title">Clinical Data Scientist</p>
+        <p class="bio">Clinical trials, real-world evidence &amp; data visualization with D3 React.</p>
+
+        <!-- Icon buttons. Each <svg> is the icon's shape; target="_blank" opens in a new tab. -->
+        <nav class="links">
+          <a href="https://www.linkedin.com/in/sanchit-thakrar" target="_blank" rel="noopener" aria-label="LinkedIn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.02-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.06 2.06 0 1 1 0-4.13 2.06 2.06 0 0 1 0 4.13zM7.12 20.45H3.56V9h3.56v11.45zM22.22 0H1.77C.79 0 0 .77 0 1.73v20.54C0 23.23.79 24 1.77 24h20.45c.98 0 1.78-.77 1.78-1.73V1.73C24 .77 23.2 0 22.22 0z"/></svg>
+          </a>
+          <a href="https://github.com/sthakrar/Data-Viz" target="_blank" rel="noopener" aria-label="GitHub">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57v-2c-3.34.73-4.04-1.6-4.04-1.6-.55-1.4-1.34-1.77-1.34-1.77-1.08-.74.09-.73.09-.73 1.2.09 1.83 1.24 1.83 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22v3.29c0 .32.21.7.82.58A12 12 0 0 0 12 .3z"/></svg>
+          </a>
+          <a href="mailto:sanchit.thakrar@gmail.com" aria-label="Email">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 4.24-8 5-8-5V6l8 5 8-5v2.24z"/></svg>
+          </a>
+        </nav>
+      </div>
+    </div>
+
+    <!-- Empty chart; js/signal.js draws the points and the fitted curve into it -->
+    <div class="signal-chart" aria-hidden="true">
+      <svg id="signal" viewBox="0 0 440 300"></svg>
+    </div>
+
+    <!-- "Projects ⌄" link. href="#projects" tells js/panels.js to open the panel. -->
+    <a class="scroll-cue" href="#projects">
+      <span>Projects</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" /></svg>
+    </a>
+  </main>
+
+  <!-- ===== Projects panel: hidden below the screen until "Projects" is clicked ===== -->
+  <section id="panel-projects" class="section" aria-label="Projects">
+    <a class="close-panel" href="#">&larr; Back</a>
+    <h2>Projects</h2>
+
+    <!-- TODO: replace with your project. To add more, copy the whole <article>...</article> block. -->
+    <div class="project-grid">
+      <article class="project">
+        <p>[placeholder text]</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- Scripts go at the end so the page content above exists before they run -->
+  <script src="js/beam-sync.js"></script>  <!-- shared timing; must load before signal.js -->
+  <script src="js/signal.js"></script>
+  <script src="js/panels.js"></script>
+</body>
+</html>

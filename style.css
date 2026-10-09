@@ -1,0 +1,472 @@
+/* =====================================================================
+   style.css — all the styling for index.html
+
+   Quick CSS refresher:
+   - A "rule" looks like:   selector { property: value; }
+   - .name   targets elements with class="name"
+   - #name   targets the element with id="name"
+   - var(--x) reads a variable defined in :root below
+   - rem = size relative to the base font (1rem = 16px here)
+   - vw / vh = 1% of the browser window's width / height
+   - clamp(min, preferred, max) = "use preferred, but never go below
+     min or above max". Great for sizes that adapt to screen width.
+   ===================================================================== */
+
+
+/* ---------------------------------------------------------------------
+   1. Variables (colours, fonts, spacing)
+   Change a value here and it updates everywhere it's used.
+   --------------------------------------------------------------------- */
+:root {
+  /* Colours */
+  --bg: #eef3f8;         /* page background (light blue-grey) */
+  --grid-dot: #cdd8e5;   /* the faint dots in the background */
+  --surface: #ffffff;    /* card backgrounds */
+  --border: #d6e0eb;     /* thin borders */
+  --ink: #0f2a44;        /* headings (darkest blue) */
+  --text: #22364d;       /* normal text */
+  --muted: #5f7189;      /* softer, secondary text */
+  --accent: #1d6fd8;     /* the main blue used for highlights */
+  --beam-1: #7cc4ff;     /* light end of the beam */
+  --beam-2: #1d6fd8;     /* dark end of the beam */
+
+  /* Fonts (loaded from Google Fonts in index.html) */
+  --font-heading: "Source Serif 4", Georgia, serif;
+  --font-body: "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+
+  /* Spacing */
+  --gutter: clamp(16px, 8vw, 120px);  /* space between content and the left/right window edge */
+  --header-h: 64px;                    /* height of the top header bar */
+}
+
+
+/* ---------------------------------------------------------------------
+   2. Base styles for the whole page
+   --------------------------------------------------------------------- */
+
+/* Reset: browsers add their own margins/padding; remove them so we're
+   in full control. "border-box" makes width include padding + border,
+   which makes sizes much easier to reason about. */
+*,
+*::before,
+*::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* Page background: a tiny dot repeated every 22px, like graph paper */
+body {
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  color: var(--text);
+  font: 16px/1.6 var(--font-body);   /* font-size / line-height  font-family */
+}
+
+h1,
+h2 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.15;
+}
+
+
+/* ---------------------------------------------------------------------
+   3. Header bar (your name at the top)
+   --------------------------------------------------------------------- */
+.site-header {
+  position: sticky;      /* stays stuck to the top while scrolling */
+  top: 0;
+  z-index: 10;           /* z-index = stacking order; higher sits on top */
+  height: var(--header-h);
+  display: flex;         /* flexbox lines children up in a row */
+  align-items: center;   /* ...centred vertically */
+  padding: 0 var(--gutter);
+  background: rgba(238, 243, 248, 0.85);   /* slightly see-through */
+  backdrop-filter: blur(10px);             /* blurs whatever is behind it */
+  -webkit-backdrop-filter: blur(10px);     /* same, for Safari */
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header .brand {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--ink);
+  text-decoration: none;   /* no underline on the link */
+  white-space: nowrap;     /* never wrap onto two lines */
+}
+
+
+/* ---------------------------------------------------------------------
+   4. Home screen layout ("hero" = the first full screen you see)
+   Card on the left, "noise → signal" chart on the right.
+   --------------------------------------------------------------------- */
+.hero {
+  position: relative;      /* lets the "Projects" arrow be placed inside it */
+  min-height: calc(100vh - var(--header-h));   /* fill the window below the header */
+  display: flex;
+  align-items: center;               /* centre card + chart vertically */
+  justify-content: space-between;    /* push them to opposite sides */
+  gap: clamp(2rem, 5vw, 4rem);
+  padding: 32px var(--gutter);
+  /* Used when the Projects panel opens (see section 7) */
+  transition: transform 0.55s ease, opacity 0.55s ease;
+}
+
+
+/* ---------------------------------------------------------------------
+   5. The card with the travelling beam around its edge
+
+   How the beam works:
+   - The card has two "pseudo-elements" (::before and ::after), which are
+     extra layers CSS can draw without extra HTML.
+   - Both are filled with a conic-gradient: colours arranged around a
+     circle, like a pie chart. Most of it is transparent, with a blue
+     slice. Rotating the gradient makes the blue slice sweep around.
+   - They sit 3px larger than the card and BEHIND it, so only a 3px rim
+     shows. ::after is blurred to add a soft glow.
+   - A white layer (.card-inner::before) covers the middle so the
+     gradient only shows at the very edge.
+   --------------------------------------------------------------------- */
+
+/* Register --angle as a real angle so the browser can animate it smoothly */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.card {
+  position: relative;
+  flex-shrink: 0;                      /* don't let the chart squash the card */
+  width: max-content;                  /* as wide as its content (keeps your name on one line) */
+  min-width: min(420px, 100%);
+  max-width: 100%;
+  padding: clamp(1.75rem, 5vw, 2.5rem) clamp(1.5rem, 5vw, 2.5rem);
+  border-radius: 18px;                 /* rounded corners */
+  isolation: isolate;                  /* keeps the beam layers behind THIS card only */
+  box-shadow: 0 14px 36px rgba(15, 42, 68, 0.1), 0 2px 6px rgba(15, 42, 68, 0.06);
+}
+
+/* The two beam layers */
+.card::before,
+.card::after {
+  content: "";                         /* pseudo-elements need this to appear */
+  position: absolute;
+  inset: -3px;                         /* 3px bigger than the card on every side */
+  border-radius: inherit;              /* same rounded corners as the card */
+  background: conic-gradient(
+    from var(--angle),                 /* where the circle of colours starts */
+    transparent 35%,                   /* first 35% of the circle: nothing */
+    var(--beam-1) 60%,                 /* fade into light blue... */
+    var(--beam-2) 85%,                 /* ...then darker blue... */
+    transparent                        /* ...then back to nothing */
+  );
+  z-index: -1;                         /* behind the card */
+  animation: spin 9s linear infinite;  /* one full lap every 9 seconds, forever */
+}
+
+/* The second layer is blurred to make a glow */
+.card::after {
+  filter: blur(24px);
+  opacity: 0.45;
+  z-index: -2;
+}
+
+/* The animation: turn --angle from 0deg to 360deg */
+@keyframes spin {
+  to { --angle: 360deg; }
+}
+
+/* White fill over the middle so only the edge shows the beam */
+.card-inner { border-radius: inherit; }
+
+.card-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0;                            /* exactly the card's size */
+  border-radius: inherit;
+  background: var(--surface);
+  z-index: -1;
+}
+
+/* Text inside the card */
+.card h1 {
+  font-size: clamp(1.7rem, 7vw, 2.75rem);
+  white-space: nowrap;                 /* keep your full name on one line */
+  letter-spacing: -0.01em;
+}
+
+.card .title {
+  margin-top: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+}
+
+.card .bio {
+  margin-top: 0.75rem;
+  color: var(--muted);
+}
+
+/* Round LinkedIn / GitHub / email buttons */
+.links {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.links a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;                  /* 50% radius turns a square into a circle */
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  transition: color 0.2s, border-color 0.2s, transform 0.2s;   /* animate hover changes */
+}
+
+.links a:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-3px);         /* lift up slightly */
+}
+
+/* Visible outline when someone uses the Tab key to reach the button */
+.links a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.links svg {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;                  /* icon takes the link's text colour */
+}
+
+
+/* ---------------------------------------------------------------------
+   6. "Noise → signal" chart on the right (drawn by js/signal.js)
+   --------------------------------------------------------------------- */
+.signal-chart {
+  flex: 0 1 480px;     /* aim for 480px wide, allowed to shrink */
+  max-width: 480px;
+  min-width: 0;
+}
+
+.signal-chart svg {
+  display: block;
+  width: 100%;         /* fill the box... */
+  height: auto;        /* ...and keep its proportions */
+  overflow: visible;   /* let the glow spill slightly past the edges */
+}
+
+/* Faint L-shaped axis lines */
+.signal-chart .axis { fill: none; stroke: #c9d6e4; stroke-width: 1; }
+
+/* Figure caption above the chart, styled like a CSR figure title */
+.signal-chart .caption {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  fill: var(--muted);
+}
+
+/* The data points. "arm-b" = the second group (e.g. control arm), lighter blue */
+.signal-chart .point { fill: var(--accent); opacity: 0; }
+.signal-chart .point.arm-b { fill: #8fc3f5; }
+
+/* The figure's lines, drawn by the beam.
+   Trick for "drawing" a line: make the dash pattern one dash as long as
+   the whole line (dasharray 100) and shift it fully out of view
+   (dashoffset 100). Animating the offset to 0 slides the dash in, so the
+   line appears to draw itself. js/signal.js does that animation. */
+.signal-chart .fit {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+}
+.signal-chart .fit.glow { stroke: #7cc4ff; stroke-width: 8; opacity: 0.5; filter: url(#signal-blur); }
+.signal-chart .fit.line { stroke: url(#signal-grad); stroke-width: 2.5; }
+.signal-chart .fit.line.arm-b { stroke: #8fc3f5; stroke-width: 2; }      /* second group's line */
+.signal-chart .fit.line.ref { stroke: #c3d2e2; stroke-width: 1; }        /* reference lines (e.g. HR = 1, zero) */
+
+/* Thick bars (used for stacked bars), shaded by severity: mild → severe */
+.signal-chart .fit.line.bar { stroke-width: 16; stroke-linecap: butt; }
+.signal-chart .fit.line.bar.sev-1 { stroke: #cfe5fa; }
+.signal-chart .fit.line.bar.sev-2 { stroke: #8fc3f5; }
+.signal-chart .fit.line.bar.sev-3 { stroke: var(--accent); }
+
+/* On narrower screens (tablets, phones), stack the card above the chart.
+   This must come AFTER the .hero and .signal-chart rules above: when two
+   rules match equally, the later one wins. */
+@media (max-width: 960px) {
+  .hero {
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding-right: 16px;
+  }
+  .signal-chart { width: 100%; max-width: 560px; }
+}
+
+
+/* ---------------------------------------------------------------------
+   7. "Projects" arrow and the slide-up Projects panel
+   --------------------------------------------------------------------- */
+
+/* The "Projects ⌄" link at the bottom centre of the home screen */
+.scroll-cue {
+  position: absolute;            /* placed relative to .hero */
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);   /* shift back by half its width to truly centre it */
+  display: flex;
+  flex-direction: column;        /* word above, arrow below */
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.scroll-cue:hover,
+.scroll-cue:focus-visible { color: var(--accent); }
+
+.scroll-cue svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: nudge 1.8s ease-in-out infinite;   /* gentle up-and-down bob */
+}
+
+@keyframes nudge {
+  50% { transform: translateY(5px); }
+}
+
+/* The panel itself. It always exists, but sits just below the bottom of
+   the window (translateY(100%)) and hidden until it's opened. */
+.section {
+  position: fixed;               /* fixed to the window, not the page */
+  top: var(--header-h);          /* starts just under the header... */
+  left: 0;
+  right: 0;
+  bottom: 0;                     /* ...and fills the rest of the window */
+  z-index: 5;
+  overflow-y: auto;              /* scroll inside the panel if content is long */
+  padding: 3.5rem 16px 4rem var(--gutter);
+  background-color: var(--bg);
+  background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+  background-size: 22px 22px;
+  border-top: 1px solid var(--border);
+  border-radius: 22px 22px 0 0;  /* round only the top corners */
+  box-shadow: 0 -18px 40px rgba(15, 42, 68, 0.12);
+  transform: translateY(100%);   /* pushed down out of view */
+  visibility: hidden;
+  /* Slide over 0.55s; only hide it AFTER the slide finishes */
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s linear 0.55s;
+}
+
+/* js/panels.js adds the "is-open" class to slide the panel up */
+.section.is-open {
+  z-index: 6;
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), visibility 0s;
+}
+
+/* While a panel is open: stop the page behind from scrolling, and
+   shrink + fade the home screen slightly so the panel feels on top */
+body.panel-open { overflow: hidden; }
+
+body.panel-open .hero {
+  transform: scale(0.96);
+  opacity: 0.5;
+}
+
+/* "← Back" link at the top of the panel */
+.close-panel {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.close-panel:hover,
+.close-panel:focus-visible { color: var(--accent); }
+
+.section h2 {
+  font-size: 1.9rem;
+  margin-bottom: 1rem;
+}
+
+/* Project cards: a grid that fits as many 240px+ columns as there's room for */
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+  max-width: 960px;
+  margin-top: 1.5rem;
+}
+
+.project {
+  padding: 1.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.project:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px);
+}
+
+.project h3 {
+  margin: 0.4rem 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.project p {
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+
+/* ---------------------------------------------------------------------
+   8. Reduced motion
+   Some people set their computer to "reduce motion" (it can cause
+   dizziness). For them, switch off the movement on this page.
+   --------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .section,
+  .hero { transition: none !important; }
+  .card::before,
+  .card::after,
+  .scroll-cue svg { animation: none; }
+  .links a:hover,
+  .project:hover { transform: none; }
+}
