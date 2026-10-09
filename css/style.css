@@ -27,8 +27,6 @@
   --text: #22364d;       /* normal text */
   --muted: #5f7189;      /* softer, secondary text */
   --accent: #1d6fd8;     /* the main blue used for highlights */
-  --beam-1: #7cc4ff;     /* light end of the beam */
-  --beam-2: #1d6fd8;     /* dark end of the beam */
 
   /* Fonts (loaded from Google Fonts in index.html) */
   --font-heading: "Source Serif 4", Georgia, serif;
@@ -71,7 +69,7 @@ h2 {
 
 
 /* ---------------------------------------------------------------------
-   3. Header bar (your name at the top)
+   3. Header bar (monogram on the left, links on the right)
    --------------------------------------------------------------------- */
 .site-header {
   position: sticky;      /* stays stuck to the top while scrolling */
@@ -80,6 +78,7 @@ h2 {
   height: var(--header-h);
   display: flex;         /* flexbox lines children up in a row */
   align-items: center;   /* ...centred vertically */
+  justify-content: space-between;   /* monogram left, links right */
   padding: 0 var(--gutter);
   background: rgba(238, 243, 248, 0.85);   /* slightly see-through */
   backdrop-filter: blur(10px);             /* blurs whatever is behind it */
@@ -88,13 +87,40 @@ h2 {
 }
 
 .site-header .brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
   color: var(--ink);
   text-decoration: none;   /* no underline on the link */
-  white-space: nowrap;     /* never wrap onto two lines */
 }
+
+.site-nav {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.site-nav a {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.site-header a:hover,
+.site-header a:focus-visible { color: var(--accent); }
+.site-header .brand:hover,
+.site-header .brand:focus-visible { border-color: var(--accent); }
 
 
 /* ---------------------------------------------------------------------
@@ -103,7 +129,7 @@ h2 {
    --------------------------------------------------------------------- */
 .hero {
   position: relative;      /* lets the "Projects" arrow be placed inside it */
-  min-height: calc(100vh - var(--header-h));   /* fill the window below the header */
+  min-height: calc(84vh - var(--header-h));    /* most of the window, so content sits higher and "Projects" stays close */
   display: flex;
   align-items: center;               /* centre card + chart vertically */
   justify-content: space-between;    /* push them to opposite sides */
@@ -115,79 +141,19 @@ h2 {
 
 
 /* ---------------------------------------------------------------------
-   5. The card with the travelling beam around its edge
-
-   How the beam works:
-   - The card has two "pseudo-elements" (::before and ::after), which are
-     extra layers CSS can draw without extra HTML.
-   - Both are filled with a conic-gradient: colours arranged around a
-     circle, like a pie chart. Most of it is transparent, with a blue
-     slice. Rotating the gradient makes the blue slice sweep around.
-   - They sit 3px larger than the card and BEHIND it, so only a 3px rim
-     shows. ::after is blurred to add a soft glow.
-   - A white layer (.card-inner::before) covers the middle so the
-     gradient only shows at the very edge.
+   5. The card: a white panel with a thin border and a soft shadow, kept
+   quiet so the chart on the right stays the focal point
    --------------------------------------------------------------------- */
-
-/* Register --angle as a real angle so the browser can animate it smoothly */
-@property --angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
-}
-
 .card {
-  position: relative;
   flex-shrink: 0;                      /* don't let the chart squash the card */
   width: max-content;                  /* as wide as its content (keeps your name on one line) */
   min-width: min(420px, 100%);
   max-width: 100%;
   padding: clamp(1.75rem, 5vw, 2.5rem) clamp(1.5rem, 5vw, 2.5rem);
-  border-radius: 18px;                 /* rounded corners */
-  isolation: isolate;                  /* keeps the beam layers behind THIS card only */
-  box-shadow: 0 14px 36px rgba(15, 42, 68, 0.1), 0 2px 6px rgba(15, 42, 68, 0.06);
-}
-
-/* The two beam layers */
-.card::before,
-.card::after {
-  content: "";                         /* pseudo-elements need this to appear */
-  position: absolute;
-  inset: -3px;                         /* 3px bigger than the card on every side */
-  border-radius: inherit;              /* same rounded corners as the card */
-  background: conic-gradient(
-    from var(--angle),                 /* where the circle of colours starts */
-    transparent 35%,                   /* first 35% of the circle: nothing */
-    var(--beam-1) 60%,                 /* fade into light blue... */
-    var(--beam-2) 85%,                 /* ...then darker blue... */
-    transparent                        /* ...then back to nothing */
-  );
-  z-index: -1;                         /* behind the card */
-  animation: spin 9s linear infinite;  /* one full lap every 9 seconds, forever */
-}
-
-/* The second layer is blurred to make a glow */
-.card::after {
-  filter: blur(24px);
-  opacity: 0.45;
-  z-index: -2;
-}
-
-/* The animation: turn --angle from 0deg to 360deg */
-@keyframes spin {
-  to { --angle: 360deg; }
-}
-
-/* White fill over the middle so only the edge shows the beam */
-.card-inner { border-radius: inherit; }
-
-.card-inner::before {
-  content: "";
-  position: absolute;
-  inset: 0;                            /* exactly the card's size */
-  border-radius: inherit;
   background: var(--surface);
-  z-index: -1;
+  border: 1px solid var(--border);
+  border-radius: 18px;                 /* rounded corners */
+  box-shadow: 0 6px 20px rgba(15, 42, 68, 0.05);
 }
 
 /* Text inside the card */
@@ -209,6 +175,7 @@ h2 {
 
 .card .bio {
   margin-top: 0.75rem;
+  max-width: 34ch;                     /* wrap the sentence instead of stretching the card */
   color: var(--muted);
 }
 
@@ -270,6 +237,15 @@ h2 {
 /* Faint L-shaped axis lines */
 .signal-chart .axis { fill: none; stroke: #c9d6e4; stroke-width: 1; }
 
+/* Axis titles, quieter than the caption */
+.signal-chart .axis-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  fill: #8a9ab0;
+}
+
 /* Figure caption above the chart, styled like a CSR figure title */
 .signal-chart .caption {
   font-family: var(--font-mono);
@@ -306,6 +282,44 @@ h2 {
 .signal-chart .fit.line.bar.sev-2 { stroke: #8fc3f5; }
 .signal-chart .fit.line.bar.sev-3 { stroke: var(--accent); }
 
+/* Figure picker: a row of short lines under the chart, one per figure.
+   Each line is a button; the visible line is drawn with ::before so the
+   button itself can be taller and easier to click. */
+.figure-picker {
+  display: flex;
+  gap: 3px;
+  margin-top: 14px;
+  padding-left: 20px;                  /* line up with the chart's axis */
+}
+
+.figure-picker button {
+  flex: 1 1 0;
+  max-width: 14px;
+  height: 18px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.figure-picker button::before {
+  content: "";
+  display: block;
+  height: 2px;
+  border-radius: 1px;
+  background: #c9d6e4;
+  transition: background 0.2s, height 0.2s;
+}
+
+.figure-picker button:hover::before { background: var(--muted); height: 3px; }
+.figure-picker button.is-current::before { background: var(--accent); height: 3px; }
+
+.figure-picker button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: 2px;
+}
+
 /* On narrower screens (tablets, phones), stack the card above the chart.
    This must come AFTER the .hero and .signal-chart rules above: when two
    rules match equally, the later one wins. */
@@ -315,6 +329,7 @@ h2 {
     justify-content: center;
     align-items: flex-start;
     padding-right: 16px;
+    padding-bottom: 88px;   /* room for "Projects" under the chart */
   }
   .signal-chart { width: 100%; max-width: 560px; }
 }
@@ -328,7 +343,7 @@ h2 {
 .scroll-cue {
   position: absolute;            /* placed relative to .hero */
   left: 50%;
-  bottom: 24px;
+  bottom: 8px;
   transform: translateX(-50%);   /* shift back by half its width to truly centre it */
   display: flex;
   flex-direction: column;        /* word above, arrow below */
@@ -464,8 +479,6 @@ body.panel-open .hero {
 @media (prefers-reduced-motion: reduce) {
   .section,
   .hero { transition: none !important; }
-  .card::before,
-  .card::after,
   .scroll-cue svg { animation: none; }
   .links a:hover,
   .project:hover { transform: none; }

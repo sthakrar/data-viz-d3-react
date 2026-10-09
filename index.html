@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <!--
   index.html: the content of the page.
-  - Styling (colours, layout, the beam) lives in  css/style.css
-  - The chart animation lives in                  js/signal.js (timing in js/beam-sync.js)
+  - Styling (colours, layout) lives in            css/style.css
+  - The chart animation lives in                  js/signal.js
   - The slide-up Projects panel lives in          js/panels.js
   The "class" names below (like class="card") are how the CSS finds
   each element to style it.
@@ -24,20 +24,25 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <!-- Top bar. Clicking your name ("#") also closes the Projects panel. -->
+  <!-- Top bar: monogram on the left, links on the right.
+       Clicking the monogram ("#") also closes the Projects panel. -->
   <header class="site-header">
-    <a class="brand" href="#">Sanchit Thakrar</a>
+    <a class="brand" href="#" aria-label="Sanchit Thakrar, home">ST</a>
+    <nav class="site-nav">
+      <a href="#projects">Projects</a>
+      <a href="mailto:sanchit.thakrar@gmail.com">Contact</a>
+    </nav>
   </header>
 
   <!-- ===== Home screen: card on the left, "noise → signal" chart on the right ===== -->
   <main class="hero">
 
-    <!-- The card. Its travelling blue edge is pure CSS (style.css, section 5). -->
+    <!-- The card: name, title, short bio and links -->
     <div class="card">
       <div class="card-inner">
         <h1>Sanchit Thakrar</h1>
         <p class="title">Clinical Data Scientist</p>
-        <p class="bio">Data visualization with D3 React, clinical trials &amp; real-world evidence.</p>
+        <p class="bio">Exploring clinical trials and real-world evidence through data, code, and interactive visualization.</p>
 
         <!-- Icon buttons. Each <svg> is the icon's shape; target="_blank" opens in a new tab. -->
         <nav class="links">
@@ -58,8 +63,10 @@
     </div>
 
     <!-- Empty chart; js/signal.js draws the points and the fitted curve into it -->
-    <div class="signal-chart" aria-hidden="true">
-      <svg id="signal" viewBox="0 0 440 300"></svg>
+    <div class="signal-chart">
+      <svg id="signal" viewBox="0 0 440 300" aria-hidden="true"></svg>
+      <!-- One short line per figure; js/signal.js fills this in. Click one to jump to it. -->
+      <div id="figure-picker" class="figure-picker" aria-label="Choose a figure"></div>
     </div>
 
     <!-- "Projects ⌄" link. href="#projects" tells js/panels.js to open the panel. -->
@@ -83,7 +90,6 @@
   </section>
 
   <!-- Scripts go at the end so the page content above exists before they run -->
-  <script src="js/beam-sync.js"></script>  <!-- shared timing; must load before signal.js -->
   <script src="js/signal.js"></script>
   <script src="js/panels.js"></script>
 </body>

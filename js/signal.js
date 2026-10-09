@@ -4,14 +4,16 @@
 // A rotating gallery of figures you'd find in a clinical study report
 // (the "F" in TFLs: Tables, Figures and Listings). Each round:
 //   1. The data points scatter into a loose cloud (the "noise").
-//   2. When the beam around your name card passes the card's right or
-//      left edge (twice per lap), a beam sweeps across the chart, drawing
-//      the figure's lines. Each point eases into place just as the beam
-//      reaches it (the "signal").
-//   3. Next half lap, the next figure. There are 24, mixing late-phase
-//      figures (Kaplan–Meier, forest plot, waterfall...) with early-phase
+//   2. A beam sweeps across the chart, drawing the figure's lines. Each
+//      point eases into place just as the beam reaches it (the "signal").
+//   3. After a pause, the next figure. There are 28, mixing late-phase
+//      figures (Kaplan–Meier, forest plot, waterfall...), early-phase
 //      ones (SAD, MAD, PK/PD, bioequivalence, vaccine titres, ADA,
-//      reactogenicity, eDISH...). See the FIGURES list for the order.
+//      reactogenicity, eDISH...), safety, real-world evidence and
+//      meta-analysis. See the FIGURES list for the order.
+//
+// The row of short lines under the chart has one line per figure:
+// the highlighted one is on show, and clicking a line jumps to it.
 //
 // All the data is made up fresh each time, so every round looks a bit
 // different.
@@ -35,6 +37,7 @@
   const COUNT = 38;               // how many data points
   const NOISE = 45;               // how scattered the "noise" cloud is
   const SWEEP_MS = 1500;          // how long the beam takes to draw a figure
+  const HOLD_MS = 3000;           // how long a finished figure stays before the next one
 
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -78,6 +81,7 @@
   //
   // Each figure is a function that returns:
   //   label  — the caption shown above the chart
+  //   axes   — [x-axis title, y-axis title]
   //   points — where each of the COUNT points should end up:
   //            { x, y, o (opacity, optional), arm ("b" for the second
   //              colour, optional), t (0–1: when the beam reaches it,
@@ -95,7 +99,7 @@
     for (let x = LEFT; x <= RIGHT; x += 6) d += (x === LEFT ? "M" : " L") + x + "," + f1(curve(x));
 
     return {
-      label: "Model fit",
+      label: "Model fit", axes: ["Time", "Response"],
       points: spreadX(COUNT).map((x) => ({ x, y: curve(x) + bellCurve() * 7 })),
       paths: [{ d }],
     };
@@ -132,7 +136,7 @@
 
     const a = arm(0.9, "a", 19), b = arm(1.9, "b", 19);   // arm A does better (fewer events)
     return {
-      label: "Kaplan–Meier estimate",
+      label: "Kaplan–Meier estimate", axes: ["Time", "Survival probability"],
       points: [...a.points, ...b.points],
       paths: [a.path, b.path],
     };
@@ -162,7 +166,7 @@
 
     while (points.length < COUNT) points.push(unused());
     return {
-      label: "Hazard ratios by subgroup",
+      label: "Hazard ratios by subgroup", axes: ["Hazard ratio (log)", "Subgroup"],
       points,
       paths: [
         { d: `M${f1(xOf(1))},${TOP} L${f1(xOf(1))},${BOTTOM}`, cls: "ref" },   // HR = 1: no difference
@@ -185,7 +189,7 @@
 
     // A short line at each group's mean, joined into one path
     const d = groupX.map((x, g) => `${g === 0 ? "M" : "L"}${f1(x - 26)},${f1(means[g])} L${f1(x + 26)},${f1(means[g])}`).join(" ");
-    return { label: "ANOVA: response by dose", points, paths: [{ d }] };
+    return { label: "ANOVA: response by dose", axes: ["Dose group", "Response"], points, paths: [{ d }] };
   }
 
   // 5. WATERFALL — each patient's best % change in tumour size, sorted
@@ -198,7 +202,7 @@
     const xs = changes.map((_, i) => lerp(LEFT + 5, RIGHT - 5, i / (COUNT - 1)));
 
     return {
-      label: "Waterfall: best % change",
+      label: "Waterfall: best % change", axes: ["Patient", "Best % change"],
       points: changes.map((pct, i) => ({ x: xs[i], y: yOf(pct), arm: pct <= -30 ? "a" : "b" })),
       paths: [
         { d: `M${LEFT},${f1(zeroY)} L${RIGHT},${f1(zeroY)}`, cls: "ref" },
@@ -227,7 +231,7 @@
 
     const line = (size) => Array.from({ length: visits }, (_, v) => `${v === 0 ? "M" : "L"}${f1(xOf(v))},${f1(yOf(curve(v, size)))}`).join(" ");
     return {
-      label: "Mean change from baseline",
+      label: "Mean change from baseline", axes: ["Visit", "Change from baseline"],
       points,
       paths: [{ d: line(sizeA) }, { d: line(sizeB), cls: "arm-b" }],
     };
@@ -255,7 +259,7 @@
            ` M${f1(x)},${f1(q3)} L${f1(x)},${f1(max)} M${f1(x - 10)},${f1(max)} L${f1(x + 10)},${f1(max)}`,          // lower whisker
       });
     });
-    return { label: "Box plot by treatment arm", points, paths };
+    return { label: "Box plot by treatment arm", axes: ["Treatment arm", "Value"], points, paths };
   }
 
   // 8. PK CONCENTRATION–TIME — how much drug is in the blood after a
@@ -278,7 +282,7 @@
 
     let d = "";
     for (let t = 0; t <= 16; t += 0.25) d += (t === 0 ? "M" : " L") + f1(xOf(t)) + "," + f1(yOf(conc(t)));
-    return { label: "Concentration–time profile", points, paths: [{ d }] };
+    return { label: "Concentration–time profile", axes: ["Time (h)", "Concentration"], points, paths: [{ d }] };
   }
 
   // 9. SWIMMER PLOT — one lane per patient showing how long they stayed
@@ -296,7 +300,7 @@
       points.push({ x: end, y: yOf(r), t: r / rows });                                          // end of treatment
       if (Math.random() < 0.7) points.push({ x: lerp(LEFT, end, random(0.2, 0.6)), y: yOf(r), arm: "b", t: r / rows });   // response
     });
-    return { label: "Swimmer plot: time on treatment", points, paths: [{ d: lanes.join(" ") }] };
+    return { label: "Swimmer plot: time on treatment", axes: ["Time on treatment", "Patient"], points, paths: [{ d: lanes.join(" ") }] };
   }
 
   // 10. SPAGHETTI PLOT — every patient's own measurements over the
@@ -318,7 +322,7 @@
       }
       paths.push({ d, cls: arm === "b" ? "arm-b" : "" });
     }
-    return { label: "Individual patient profiles", points, paths };
+    return { label: "Individual patient profiles", axes: ["Visit", "Value"], points, paths };
   }
 
   // 11. DOSE–RESPONSE (Emax) — the effect rises with dose, then levels
@@ -337,7 +341,7 @@
 
     let d = "";
     for (let k = 0; k <= doses - 1 + 0.001; k += 0.1) d += (k === 0 ? "M" : " L") + f1(xOf(k)) + "," + f1(yOf(effect(k)));
-    return { label: "Dose–response (Emax model)", points, paths: [{ d }] };
+    return { label: "Dose–response (Emax model)", axes: ["Dose (log)", "Effect"], points, paths: [{ d }] };
   }
 
   // 12. ROC CURVE — how well a biomarker separates patients who respond
@@ -357,7 +361,7 @@
     let d = "";
     for (let f = 0; f <= 1.0001; f += 0.02) d += (f === 0 ? "M" : " L") + f1(xOf(f)) + "," + f1(yOf(curve(Math.min(f, 1))));
     return {
-      label: "ROC curve for biomarker",
+      label: "ROC curve for biomarker", axes: ["False positive rate", "True positive rate"],
       points,
       paths: [{ d: `M${LEFT},${BOTTOM} L${RIGHT},${TOP}`, cls: "ref" }, { d }],
     };
@@ -377,7 +381,7 @@
       return { x: xOf(t), y: yOf(i + 1) };
     });
     return {
-      label: "Cumulative enrollment vs plan",
+      label: "Cumulative enrollment vs plan", axes: ["Time", "Patients enrolled"],
       points,
       paths: [{ d: `M${LEFT},${BOTTOM} L${RIGHT},${TOP + 10}`, cls: "ref" }, { d }],
     };
@@ -407,7 +411,7 @@
       d += ` L${f1(edge)},${f1(levelY(k))}`;
       if (k < cohorts - 1) d += ` L${f1(edge)},${f1(levelY(k + 1))}`;
     }
-    return { label: "Single Ascending Dose: dose escalation by cohort", points, paths: [{ d }] };
+    return { label: "Single Ascending Dose: dose escalation by cohort", axes: ["Cohort", "Exposure"], points, paths: [{ d }] };
   }
 
   // 15. MAD — multiple ascending dose. With a dose every day, drug builds
@@ -434,7 +438,7 @@
       for (let k = 0; k < 3; k++) points.push({ x: xOf(n + tPeak) + random(-3, 3), y: clamp(yOf(conc(n + tPeak) * Math.exp(bellCurve() * 0.1)), TOP, BOTTOM) });
       if (n > 0) for (let k = 0; k < 2; k++) points.push({ x: xOf(n - 0.01) + random(-3, 3), y: clamp(yOf(conc(n - 0.01) * Math.exp(bellCurve() * 0.12)), TOP, BOTTOM), arm: "b" });
     }
-    return { label: "Multiple Ascending Dose: accumulation to steady state", points, paths: [{ d }] };
+    return { label: "Multiple Ascending Dose: accumulation to steady state", axes: ["Time (days)", "Concentration"], points, paths: [{ d }] };
   }
 
   // 16. DOSE PROPORTIONALITY — on log scales, if exposure (Cmax) rises
@@ -451,7 +455,7 @@
       for (let n = 0; n < 7; n++) points.push({ x: xOf(k) + random(-7, 7), y: yOf(slope * k + bellCurve() * 0.28) });
     }
     const line = (b) => `M${f1(xOf(0))},${f1(yOf(0))} L${f1(xOf(levels - 1))},${f1(yOf(b * (levels - 1)))}`;
-    return { label: "Dose proportionality: Cmax vs dose (log–log)", points, paths: [{ d: line(1), cls: "ref" }, { d: line(slope) }] };
+    return { label: "Dose proportionality: Cmax vs dose (log–log)", axes: ["Dose (log)", "Cmax (log)"], points, paths: [{ d: line(1), cls: "ref" }, { d: line(slope) }] };
   }
 
   // 17. PK/PD HYSTERESIS — plotting effect against concentration over
@@ -475,7 +479,7 @@
       const p = samples[Math.round(Math.pow(i / (COUNT - 1), 1.4) * (samples.length - 1))];
       return { x: xOf(p.c), y: yOf(p.e), t: i / COUNT };   // the beam follows the loop, not left-to-right
     });
-    return { label: "PK/PD: hysteresis loop", points, paths: [{ d }] };
+    return { label: "PK/PD: hysteresis loop", axes: ["Concentration", "Effect"], points, paths: [{ d }] };
   }
 
   // 18. BIOEQUIVALENCE — the ratio of test to reference (geometric mean
@@ -495,7 +499,7 @@
       points.push({ x: xOf(gmr), y: yOf(r), t: r / rows });
     }
     const vline = (r) => ({ d: `M${f1(xOf(r))},${TOP} L${f1(xOf(r))},${BOTTOM}`, cls: "ref" });
-    return { label: "Bioequivalence: 90% CI of GMR", points, paths: [vline(0.8), vline(1), vline(1.25), { d: ci.join(" ") }] };
+    return { label: "Bioequivalence: 90% CI of GMR", axes: ["Test / reference ratio", "PK parameter"], points, paths: [vline(0.8), vline(1), vline(1.25), { d: ci.join(" ") }] };
   }
 
   // 19. CONCENTRATION–QTc — does more drug lengthen the heart's QT
@@ -511,7 +515,7 @@
     });
     const line = (a, b) => `M${f1(xOf(0))},${f1(yOf(a))} L${f1(xOf(1))},${f1(yOf(a + b))}`;
     return {
-      label: "Concentration–QTc analysis",
+      label: "Concentration–QTc analysis", axes: ["Concentration", "ΔΔQTc (ms)"],
       points,
       paths: [{ d: `M${LEFT},${f1(yOf(10))} L${RIGHT},${f1(yOf(10))}`, cls: "ref" }, { d: line(start, slope) }, { d: line(start + 1.5, slope + 1.5), cls: "arm-b" }],
     };
@@ -532,7 +536,7 @@
     });
     const line = (vals) => vals.map((v, i) => (i === 0 ? "M" : "L") + f1(xOf(i)) + "," + f1(yOf(v))).join(" ");
     return {
-      label: "Vaccine: GMT after prime and boost",
+      label: "Vaccine: GMT after prime and boost", axes: ["Visit", "GMT (log)"],
       points,
       paths: [{ d: `M${LEFT},${f1(yOf(1.6))} L${RIGHT},${f1(yOf(1.6))}`, cls: "ref" }, { d: line(profile) }, { d: line(profile.map(() => 0)), cls: "arm-b" }],
     };
@@ -555,7 +559,7 @@
       return { points, path: { d, cls: armName === "b" ? "arm-b" : "" } };
     }
     const a = arm(random(2.8, 3.4), "a"), b = arm(random(1.2, 1.8), "b");
-    return { label: "Reverse cumulative distribution of titres", points: [...a.points, ...b.points], paths: [a.path, b.path] };
+    return { label: "Reverse cumulative distribution of titres", axes: ["Titre (log)", "% of subjects ≥ titre"], points: [...a.points, ...b.points], paths: [a.path, b.path] };
   }
 
   // 22. ADA TITRES — anti-drug antibodies: some subjects' immune systems
@@ -579,7 +583,7 @@
       }
       paths.push({ d, cls: responder ? "" : "arm-b" });
     }
-    return { label: "ADA titres vs cut-point", points, paths: [{ d: `M${LEFT},${f1(yOf(cut))} L${RIGHT},${f1(yOf(cut))}`, cls: "ref" }, ...paths] };
+    return { label: "ADA titres vs cut-point", axes: ["Visit", "ADA titre (log)"], points, paths: [{ d: `M${LEFT},${f1(yOf(cut))} L${RIGHT},${f1(yOf(cut))}`, cls: "ref" }, ...paths] };
   }
 
   // 23. REACTOGENICITY — share of vaccine recipients with any solicited
@@ -602,7 +606,7 @@
       points.push({ x: xOf(d), y: yOf(total) - 7 });
     }
     return {
-      label: "Reactogenicity: solicited reactions, days 1–7",
+      label: "Reactogenicity: solicited reactions, days 1–7", axes: ["Day after dose", "% with reaction"],
       points,
       paths: bars.map((segments, sev) => ({ d: segments.join(" "), cls: `bar sev-${sev + 1}` })),
     };
@@ -621,18 +625,122 @@
       return { x: xOf(Math.exp(bellCurve() * 0.45 - 0.2)), y: yOf(Math.exp(bellCurve() * 0.4 - 0.5)), arm: "b" };
     });
     return {
-      label: "eDISH: peak ALT vs peak bilirubin",
+      label: "eDISH: peak ALT vs peak bilirubin", axes: ["Peak ALT (× ULN)", "Peak bilirubin (× ULN)"],
       points,
       paths: [{ d: `M${f1(xOf(3))},${TOP} L${f1(xOf(3))},${BOTTOM}` }, { d: `M${LEFT},${f1(yOf(2))} L${RIGHT},${f1(yOf(2))}` }],
+    };
+  }
+
+  // ===============================================================
+  // Safety, real-world evidence and meta-analysis figures
+  // ===============================================================
+
+  // 25. AE VOLCANO PLOT — one point per adverse event term: how much
+  //     more (right) or less (left) often it happened on treatment, and
+  //     how strong the evidence is (higher = smaller p-value). Dark
+  //     points clear p < 0.05 (the faint horizontal line).
+  function aeVolcano() {
+    const xOf = (rd) => lerp(LEFT, RIGHT, (rd + 1) / 2);      // risk difference −1..1 (scaled)
+    const yOf = (lp) => lerp(BOTTOM, TOP, lp / 4);            // −log10(p), 0..4
+    const cut = 1.3;                                          // −log10(0.05)
+    const points = Array.from({ length: COUNT }, () => {
+      const rd = clamp(bellCurve() * 0.3 + 0.05, -0.95, 0.95);
+      const lp = clamp(Math.abs(rd) * random(3, 5) + Math.abs(bellCurve()) * 0.25, 0, 3.9);   // bigger difference, smaller p
+      return { x: xOf(rd), y: yOf(lp), arm: lp > cut ? "a" : "b" };
+    });
+    return {
+      label: "Adverse events: volcano plot", axes: ["Risk difference", "−log10(p)"],
+      points,
+      paths: [
+        { d: `M${f1(xOf(0))},${TOP} L${f1(xOf(0))},${BOTTOM}`, cls: "ref" },          // no difference
+        { d: `M${LEFT},${f1(yOf(cut))} L${RIGHT},${f1(yOf(cut))}`, cls: "ref" },       // p = 0.05
+      ],
+    };
+  }
+
+  // 26. PROPENSITY SCORE OVERLAP — in real-world data, treated and
+  //     untreated patients differ. Each patient's propensity score is
+  //     their chance of being treated, given their characteristics.
+  //     Treated (above the line) and untreated (mirrored below) should
+  //     overlap enough to compare like with like.
+  function propensityOverlap() {
+    const midY = (TOP + BOTTOM) / 2;
+    const xOf = (ps) => lerp(LEFT, RIGHT, ps);
+    const shape = (peak) => (ps) => Math.exp(-Math.pow((ps - peak) / 0.17, 2) / 2);   // a bell-shaped density
+    const treated = shape(random(0.55, 0.65)), untreated = shape(random(0.32, 0.42));
+    const height = (BOTTOM - TOP) / 2 - 10;
+
+    const curve = (dens, sign) => {
+      let d = "";
+      for (let ps = 0; ps <= 1.0001; ps += 0.02) d += (ps === 0 ? "M" : " L") + f1(xOf(ps)) + "," + f1(midY - sign * dens(ps) * height);
+      return d;
+    };
+    const points = [];
+    for (let k = 0; k < COUNT / 2; k++) {
+      const ps = (k + 0.5) / (COUNT / 2);
+      points.push({ x: xOf(ps), y: midY - treated(ps) * height * random(0.15, 1) });
+      points.push({ x: xOf(ps), y: midY + untreated(ps) * height * random(0.15, 1), arm: "b" });
+    }
+    return {
+      label: "Propensity score overlap", axes: ["Propensity score", "Treated / untreated"],
+      points,
+      paths: [{ d: `M${LEFT},${midY} L${RIGHT},${midY}`, cls: "ref" }, { d: curve(treated, 1) }, { d: curve(untreated, -1), cls: "arm-b" }],
+    };
+  }
+
+  // 27. LOVE PLOT — covariate balance before and after propensity score
+  //     matching. Each row is a patient characteristic (age, sex,
+  //     comorbidities...). Light points: the standardised difference
+  //     between groups before matching; dark: after. Matching should pull
+  //     every row inside 0.1 (the faint line).
+  function lovePlot() {
+    const rows = 10;
+    const xOf = (smd) => lerp(LEFT, RIGHT, smd / 0.6);
+    const yOf = (r) => lerp(TOP + 10, BOTTOM - 10, r / (rows - 1));
+    const before = Array.from({ length: rows }, () => random(0.08, 0.55)).sort((p, q) => q - p);
+    const points = [], links = [];
+    before.forEach((b, r) => {
+      const after = random(0.005, 0.08);
+      points.push({ x: xOf(b), y: yOf(r), arm: "b", t: r / rows });
+      points.push({ x: xOf(after), y: yOf(r), t: r / rows });
+      links.push(`M${f1(xOf(b))},${f1(yOf(r))} L${f1(xOf(after))},${f1(yOf(r))}`);
+    });
+    return {
+      label: "Covariate balance before / after matching", axes: ["Standardised mean difference", "Covariate"],
+      points,
+      paths: [{ d: `M${f1(xOf(0.1))},${TOP} L${f1(xOf(0.1))},${BOTTOM}`, cls: "ref" }, { d: links.join(" ") }],
+    };
+  }
+
+  // 28. FUNNEL PLOT — a meta-analysis check. Each point is one study:
+  //     its effect estimate (across) against its precision (bigger,
+  //     more precise studies near the top). Without publication bias
+  //     the studies fill a symmetric funnel around the pooled effect.
+  function funnelPlot() {
+    const pooled = random(-0.35, -0.15);
+    const xOf = (lor) => lerp(LEFT, RIGHT, (lor + 1.4) / 2.4);   // log odds ratio −1.4..1
+    const yOf = (se) => lerp(TOP + 5, BOTTOM, se / 0.6);           // standard error 0 (top) .. 0.6
+    const points = Array.from({ length: COUNT }, () => {
+      const se = random(0.04, 0.58);
+      return { x: xOf(clamp(pooled + bellCurve() * se, -1.4, 1)), y: yOf(se) };
+    });
+    return {
+      label: "Meta-analysis: funnel plot", axes: ["Log odds ratio", "Standard error"],
+      points,
+      paths: [
+        { d: `M${f1(xOf(pooled))},${TOP + 5} L${f1(xOf(pooled))},${BOTTOM}`, cls: "ref" },
+        { d: `M${f1(xOf(pooled - 1.96 * 0.6))},${BOTTOM} L${f1(xOf(pooled))},${TOP + 5} L${f1(xOf(pooled + 1.96 * 0.6))},${BOTTOM}` },   // 95% limits
+      ],
     };
   }
 
   // The order they appear in (edit this list to add, remove or reorder)
   const FIGURES = [
     modelFit, sadEscalation, kaplanMeier, madAccumulation, forestPlot, hysteresis,
-    boxPlot, bioequivalence, waterfall, pkCurve, vaccineGMT, meanChange, adaTitres,
-    swimmer, doseProportionality, anova, rcdc, spaghetti, concentrationQTc,
-    doseResponse, reactogenicity, roc, edish, enrollment,
+    boxPlot, bioequivalence, waterfall, propensityOverlap, pkCurve, vaccineGMT,
+    meanChange, aeVolcano, adaTitres, swimmer, doseProportionality, lovePlot,
+    anova, rcdc, spaghetti, concentrationQTc, funnelPlot, doseResponse,
+    reactogenicity, roc, edish, enrollment,
   ];
 
   // Make the next figure, padding with unused (faded-out) points so
@@ -664,6 +772,17 @@
   // The caption above the chart, e.g. "Kaplan–Meier estimate"
   const caption = el("text", { class: "caption", x: LEFT - 10, y: 8 }, svg);
 
+  // Axis titles: x along the bottom (right-aligned), y up the left side
+  const xTitle = el("text", { class: "axis-title", x: RIGHT + 10, y: BOTTOM + 26, "text-anchor": "end" }, svg);
+  const yTitle = el("text", { class: "axis-title", "text-anchor": "end", transform: `translate(${LEFT - 16},${TOP - 10}) rotate(-90)` }, svg);
+  const titles = [caption, xTitle, yTitle];
+
+  // Fill in the caption and axis titles for a figure
+  function setTitles(figure) {
+    caption.textContent = figure.label;
+    [xTitle.textContent, yTitle.textContent] = figure.axes;
+  }
+
   // A group for the figure's lines, drawn underneath the points
   const lines = el("g", {}, svg);
 
@@ -694,6 +813,46 @@
   const reachedAt = (p) => (p.t !== undefined ? p.t : (p.x - LEFT) / (RIGHT - LEFT));
 
   // ---------------------------------------------------------------
+  // Figure picker: one short line per figure under the chart.
+  // The highlighted line is the figure on show; clicking one asks the
+  // main sequence to jump to it.
+  // ---------------------------------------------------------------
+  const picker = document.getElementById("figure-picker");
+  const buttons = FIGURES.map((make, i) => {
+    const name = make().label;   // make one just to read its caption
+    const button = document.createElement("button");
+    button.type = "button";
+    button.title = name;                       // shown on hover
+    button.setAttribute("aria-label", name);   // read out by screen readers
+    button.addEventListener("click", () => jumpTo(i));
+    if (picker) picker.appendChild(button);
+    return button;
+  });
+
+  const markCurrent = (index) => buttons.forEach((b, i) => {
+    b.classList.toggle("is-current", i === index);
+    if (i === index) b.setAttribute("aria-current", "true");
+    else b.removeAttribute("aria-current");
+  });
+
+  let requested = null;   // a figure the visitor clicked, waiting to be shown
+  let skipPause = null;   // ends the current pause early, while one is running
+
+  function jumpTo(index) {
+    requested = index;
+    if (skipPause) skipPause();
+  }
+
+  // Wait HOLD_MS, or less if a figure is clicked
+  function pause() {
+    if (requested !== null) return Promise.resolve();
+    return new Promise((resolve) => {
+      skipPause = resolve;
+      setTimeout(resolve, HOLD_MS);
+    }).then(() => { skipPause = null; });
+  }
+
+  // ---------------------------------------------------------------
   // The main sequence
   // ---------------------------------------------------------------
   async function run() {
@@ -703,15 +862,23 @@
 
     const setArms = () => points.forEach((c, i) => c.classList.toggle("arm-b", figure.points[i].arm === "b"));
 
-    // Reduce motion: show the first figure, finished, with no animation
+    // Reduce motion: show each figure finished, with no animation.
+    // The picker still switches between them.
     if (reduceMotion) {
-      setArms();
-      caption.textContent = figure.label;
-      figure.points.forEach((p, i) => {
-        points[i].style.transform = `translate(${p.x}px, ${p.y}px)`;
-        points[i].style.opacity = p.o ?? 0.85;
-      });
-      figure.paths.forEach((p) => el("path", { class: "fit line " + (p.cls || ""), d: p.d }, lines).style.strokeDashoffset = 0);
+      const show = (index) => {
+        figure = makeFigure(index);
+        markCurrent(index);
+        setArms();
+        setTitles(figure);
+        figure.points.forEach((p, i) => {
+          points[i].style.transform = `translate(${p.x}px, ${p.y}px)`;
+          points[i].style.opacity = p.o ?? 0.85;
+        });
+        lines.replaceChildren();
+        figure.paths.forEach((p) => el("path", { class: "fit line " + (p.cls || ""), d: p.d }, lines).style.strokeDashoffset = 0);
+      };
+      buttons.forEach((b, i) => b.addEventListener("click", () => show(i)));
+      show(0);
       return;
     }
 
@@ -720,26 +887,26 @@
     await Promise.all(figure.points.map((p, i) => movePoint(i, noisy(p), 1200, i * 15)));
 
     for (;;) {
-      // 1. Wait for the card's beam to pass its right edge or its left
-      //    edge, so a new figure every half lap (js/beam-sync.js)
-      await BeamSync.nextPass(svg, 2);
-
-      // 2. If a figure is showing: fade it, move to the next figure, and
-      //    scatter the points into a new noisy cloud
+      // 1. If a figure is showing: fade it, move to the next figure (or
+      //    the one clicked in the picker), and scatter the points into a
+      //    new noisy cloud
       if (drawn.length) {
         // (Giving just the end state fades from wherever each one is now)
         drawn.forEach((path) => animate(path, [{ opacity: 0 }], 500).then(() => path.remove()));
-        animate(caption, [{ opacity: 0 }], 400);
-        figureIndex = (figureIndex + 1) % FIGURES.length;
+        titles.forEach((text) => animate(text, [{ opacity: 0 }], 400));
+        figureIndex = requested ?? (figureIndex + 1) % FIGURES.length;
+        requested = null;
         figure = makeFigure(figureIndex);
         setArms();
         await Promise.all(figure.points.map((p, i) => movePoint(i, noisy(p), 600)));
       }
 
-      // 3. Show the caption, then the beam sweeps and draws the figure.
-      //    Each point eases into place as the beam reaches it.
-      caption.textContent = figure.label;
-      animate(caption, [{ opacity: 0 }, { opacity: 1 }], 600);
+      // 2. Show the caption and axis titles, then the beam sweeps and
+      //    draws the figure. Each point eases into place as the beam
+      //    reaches it.
+      markCurrent(figureIndex);
+      setTitles(figure);
+      titles.forEach((text) => animate(text, [{ opacity: 0 }, { opacity: 1 }], 600));
 
       drawn = [];
       figure.paths.forEach((p) => {
@@ -754,9 +921,12 @@
 
       figure.points.forEach((p, i) => movePoint(i, { x: p.x, y: p.y, o: p.o ?? 0.85 }, 600, reachedAt(p) * SWEEP_MS));
 
-      // 4. Once drawn, the glow fades and the thin lines stay
+      // 3. Once drawn, the glow fades and the thin lines stay
       await wait(SWEEP_MS);
       drawn.filter((path) => path.classList.contains("glow")).forEach((path) => animate(path, [{ opacity: 0 }], 800));
+
+      // 4. Pause on the finished figure (a click in the picker cuts this short)
+      await pause();
     }
   }
 
