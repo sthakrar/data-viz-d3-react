@@ -212,7 +212,7 @@ h2 {
   color: var(--muted);
 }
 
-/* Round LinkedIn / GitHub / email buttons */
+/* Round LinkedIn / GitHub / email / Google Scholar buttons */
 .links {
   display: flex;
   gap: 0.75rem;
