@@ -142,9 +142,25 @@ h2 {
 
 /* ---------------------------------------------------------------------
    5. The card: a white panel with a thin border and a soft shadow, kept
-   quiet so the chart on the right stays the focal point
+   quiet so the chart on the right stays the focal point.
+
+   A faint blue beam travels round the border:
+   - ::before is a conic-gradient (colours arranged round a circle, like
+     a pie chart): mostly transparent, with one blue slice. Rotating it
+     makes the slice sweep round the card.
+   - A mask cuts away everything but a 1px ring, so it only shows on
+     the border.
    --------------------------------------------------------------------- */
+
+/* Register --angle as a real angle so the browser can animate it smoothly */
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .card {
+  position: relative;                  /* lets the beam layer sit over the border */
   flex-shrink: 0;                      /* don't let the chart squash the card */
   width: max-content;                  /* as wide as its content (keeps your name on one line) */
   min-width: min(420px, 100%);
@@ -154,6 +170,32 @@ h2 {
   border: 1px solid var(--border);
   border-radius: 18px;                 /* rounded corners */
   box-shadow: 0 6px 20px rgba(15, 42, 68, 0.05);
+}
+
+.card::before {
+  content: "";                         /* pseudo-elements need this to appear */
+  position: absolute;
+  inset: -1px;                         /* sit exactly over the 1px border */
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--angle),                 /* where the circle of colours starts */
+    transparent 55%,                   /* most of the circle: nothing */
+    #7cc4ff 80%,                       /* fade into light blue... */
+    var(--accent) 92%,                 /* ...then the main blue... */
+    transparent                        /* ...then back to nothing */
+  );
+  animation: spin 12s linear infinite; /* one lap every 12 seconds */
+  pointer-events: none;                /* never block clicks on the links */
+  /* Keep only a 1px ring of the gradient, over the border */
+  padding: 1px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  opacity: 0.6;
+}
+
+@keyframes spin {
+  to { --angle: 360deg; }
 }
 
 /* Text inside the card */
@@ -480,6 +522,7 @@ body.panel-open .hero {
   .section,
   .hero { transition: none !important; }
   .scroll-cue svg { animation: none; }
+  .card::before { display: none; }     /* no beam */
   .links a:hover,
   .project:hover { transform: none; }
 }
