@@ -1,4 +1,4 @@
-# Data Viz with D3 and React
+# Data Viz with D3 React
 
 The home page for my data visualization work with D3 and React, focused on clinical trials and real-world evidence.
 
